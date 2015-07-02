@@ -25,7 +25,6 @@ public class CalcController {
     }
 
     @RequestMapping("/index")
-    @ResponseBody
     public String index(){
         return "index";
     }
