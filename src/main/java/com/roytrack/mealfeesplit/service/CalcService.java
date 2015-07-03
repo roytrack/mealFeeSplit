@@ -22,7 +22,10 @@ public class CalcService {
 
 
     public String calc(String origin) {
-        origin = origin.replace("\r\n", "\n").replace("\n", "\r\n").replaceAll("(\\r\\n\\d){5}\\r\\n.+\\r\\n", "").replace("该状态下不能点评","");
+        origin = origin.replace("\r\n", "\n").replace("\n", "\r\n")
+                .replaceAll("(\\r\\n\\d){5}\\r\\n.+\\r\\n", "")
+                .replace("该状态下不能点评","")
+                .replace("过期不能点评","");
         String[] strArray = origin.split("\r\n");
         List<Meal> mealList = new ArrayList<Meal>();
         List<OtherFee> otherFees = new ArrayList<OtherFee>();
@@ -109,10 +112,8 @@ public class CalcService {
             fee.setNet(CalcUtil.multiply(fee.getAmount(), off).setScale(2).doubleValue());
         }
 
-            StringBuffer stringBuffer = new StringBuffer("<html>" +
-                    "<meta http-equiv='Content-Type' content='text/html; charset=utf-8'>" +
-                    "<body><table id='tab1' border='1'><th><tr><td>序号</td><td>类目</td><td>单价</td>" +
-                    "<td>数量</td><td>小计</td><td>折扣金额</td><td>所属人(多人逗号分开)</td></tr></th>");
+            StringBuffer stringBuffer = new StringBuffer("<table id='tab1' border='1'><tr><th>序号</th><th>类目</th><th>单价</th>" +
+                    "<th>数量</th><th>小计</th><th>折扣金额</th><th>所属人(多人逗号分开)</th></tr>");
             for (Meal m : mealList) {
                 stringBuffer.append("<tr><td>").append(m.getId()).append("</td><td>").append(m.getMealName()).append("</td><td>")
                         .append(m.getPrice()).append("</td><td>").append(m.getQuantity()).append("</td><td>").append(m.getAmount())
@@ -126,7 +127,7 @@ public class CalcService {
             }
 
         }
-            stringBuffer.append("</table></body></html>");
+            stringBuffer.append("</table>");
             return stringBuffer.toString();
         }
 
