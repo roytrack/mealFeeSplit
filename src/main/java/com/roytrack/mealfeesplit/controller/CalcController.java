@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpSession;
 
 /**
  * Created by ruanchangming on 2015/7/1.
@@ -20,8 +21,16 @@ public class CalcController {
 
     @RequestMapping("/calc")
     @ResponseBody
-    public String calcFee(@RequestParam String origin){
-         return calcService.calc(origin);
+    public String calcFee(@RequestParam String origin,HttpSession
+            session){
+         return calcService.calc(origin,session);
+    }
+
+    @RequestMapping("/split")
+    @ResponseBody
+    public String splitPerson(@RequestParam String personInfo,HttpSession
+            session){
+        return calcService.splitPerson(personInfo,session);
     }
 
     @RequestMapping("/index")
