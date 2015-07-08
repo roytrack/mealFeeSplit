@@ -170,15 +170,18 @@ public class CalcService {
             int id=Integer.valueOf(line.split("@")[0]);
             String [] personName=line.split("@")[1].replace("，",",").split(",");
             double fee=0;
+            StringBuffer feeDetail=new StringBuffer();
             for(Meal m:meals){
                 if(m.getId()==id){
                     fee=CalcUtil.divide(m.getNet(),personName.length).doubleValue();
+                    feeDetail.append(m.getMealName()).append(":").append(fee).append(",");
                     break;
                 }
             }
             for(OtherFee f:fees){
                 if(f.getId()==id){
                     fee=CalcUtil.divide(f.getNet(),personName.length).doubleValue();
+                    feeDetail.append(f.getDiscountName()).append(":").append(fee).append(",");
                     break;
                 }
             }
@@ -189,8 +192,10 @@ public class CalcService {
                     p.setId(id_generator++);
                     p.setName(name);
                     p.setFee(fee);
+                    p.setDetail(feeDetail.toString());
                 }else{
                     p.setFee(CalcUtil.add(p.getFee(),fee).setScale(2, BigDecimal.ROUND_HALF_UP).doubleValue());
+                    p.setDetail(p.getDetail()+feeDetail.toString());
                 }
                 persons.put(name,p);
             }
@@ -199,14 +204,14 @@ public class CalcService {
 
 
 
-        StringBuffer stringBuffer = new StringBuffer("<table id='tab2' border='1'><tr><th>序号</th><th>姓名</th><th>费用</th></tr>");
+        StringBuffer stringBuffer = new StringBuffer("<table id='tab2' border='1'><tr><th>序号</th><th>姓名</th><th>费用</th><th>明细</th></tr>");
         Set<String>keys= persons.keySet();
         for (String p : keys) {
             stringBuffer.append("<tr><td>").append(persons.get(p).getId()).append("</td><td>").
                     append(persons.get(p).getName()).append("</td><td>")
-                    .append(persons.get(p).getFee());
+                    .append(persons.get(p).getFee()).append("</td><td>")
+                    .append(persons.get(p).getDetail()).append("</td></tr>");
         }
-
         stringBuffer.append("</table>");
         return stringBuffer.toString();
     }

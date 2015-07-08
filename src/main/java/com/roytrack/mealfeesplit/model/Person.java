@@ -7,6 +7,15 @@ public class Person {
     private int id;
     private String name;
     private double fee;
+    private String detail;
+
+    public String getDetail() {
+        return detail;
+    }
+
+    public void setDetail(String detail) {
+        this.detail = detail;
+    }
 
     public int getId() {
         return id;
