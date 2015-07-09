@@ -15,3 +15,7 @@
 ![person](http://7sblu6.com1.z0.glb.clouddn.com/elemeperson.png)
 
 运行环境要求：jdk7
+
+bug反馈：me#roytrack.com
+
+在使用过程中有bug出现，请反馈给上面那个邮箱撒。 如果有兴趣也可以自己pull request！
