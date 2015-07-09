@@ -7,7 +7,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import java.io.IOException;
 
 /**
  * Created by ruanchangming on 2015/7/1.
@@ -21,16 +24,14 @@ public class CalcController {
 
     @RequestMapping("/calc")
     @ResponseBody
-    public String calcFee(@RequestParam String origin,HttpSession
-            session){
-         return calcService.calc(origin,session);
+    public String calcFee(@RequestParam String origin,HttpServletResponse response) throws IOException {
+         return calcService.calc(origin,response);
     }
 
     @RequestMapping("/split")
     @ResponseBody
-    public String splitPerson(@RequestParam String personInfo,HttpSession
-            session){
-        return calcService.splitPerson(personInfo,session);
+    public String splitPerson(@RequestParam String personInfo,HttpServletRequest request){
+        return calcService.splitPerson(personInfo,request);
     }
 
     @RequestMapping("/index")

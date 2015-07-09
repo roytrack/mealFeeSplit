@@ -1,18 +1,27 @@
 package com.roytrack.mealfeesplit.service;
 
 
+
 import com.roytrack.mealfeesplit.model.Meal;
 import com.roytrack.mealfeesplit.model.OtherFee;
 import com.roytrack.mealfeesplit.model.Person;
 import com.roytrack.mealfeesplit.model.Total;
 import com.roytrack.mealfeesplit.util.CalcUtil;
+import com.roytrack.mealfeesplit.util.JSonUtils;
+import org.apache.commons.codec.binary.Base64;
 import org.springframework.stereotype.Service;
 
-import javax.servlet.http.HttpSession;
+
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.*;
 
 
@@ -21,16 +30,16 @@ import java.util.*;
  */
 @Service
 public class CalcService {
+    Base64 base64=new Base64();
 
-
-    public String calc(String origin ,HttpSession session) {
+    public String calc(String origin ,HttpServletResponse response) throws IOException {
         origin = origin.replace("\r\n", "\n").replace("\n", "\r\n")
                 .replaceAll("(\\r\\n\\d){5}\\r\\n.+\\r\\n", "")
                 .replace("该状态下不能点评","")
                 .replace("过期不能点评","");
         String[] strArray = origin.split("\r\n");
         List<Meal> mealList = new ArrayList<Meal>();
-        List<OtherFee> otherFees = new ArrayList<OtherFee>();
+        List<OtherFee> FeeList = new ArrayList<OtherFee>();
         short i = 1;//行数
         int flag = 0;// 0 无状态  1 美食篮子  2 其他费用
 
@@ -86,7 +95,7 @@ public class CalcService {
                     while (tmp[++j].length() == 0) continue;
                     otherFee.setAmount(Double.parseDouble(tmp[j].substring(1)));
                 }
-                otherFees.add(otherFee);
+                FeeList.add(otherFee);
                 continue;
             }
         }
@@ -95,13 +104,13 @@ public class CalcService {
             for (Meal m : mealList) {
                 orderAmount += m.getAmount();
             }
-            for(OtherFee fee:otherFees){
+            for(OtherFee fee:FeeList){
                 if(fee.getAmount()>0){
                     orderAmount+=fee.getAmount();
                 }
             }
             double orderRealAmount = orderAmount;
-            for (OtherFee fee : otherFees) {
+            for (OtherFee fee : FeeList) {
                 if(fee.getAmount()<0){
                     orderRealAmount += fee.getAmount();
                 }
@@ -111,11 +120,29 @@ public class CalcService {
                 m.setNet(CalcUtil.multiply(m.getAmount(), off).setScale(2).doubleValue());
             }
 
-        for (OtherFee fee : otherFees) {
+        for (OtherFee fee : FeeList) {
             fee.setNet(CalcUtil.multiply(fee.getAmount(), off).setScale(2).doubleValue());
         }
-        session.setAttribute("fee",otherFees);
-        session.setAttribute("meal",mealList);
+        String feeJson=JSonUtils.toJSon(FeeList);
+        String mealJson=JSonUtils.toJSon(mealList);
+
+        System.out.println("----------json-----------------");
+        System.out.println("feeJson "+feeJson);
+        System.out.println("mealJson "+mealJson);
+        System.out.println("------------encode---------------");
+        feeJson=new String(base64.encode(JSonUtils.toJSon(FeeList).getBytes()));
+        mealJson=new String(base64.encode(JSonUtils.toJSon(mealList).getBytes()));
+        System.out.println(feeJson);
+        System.out.println(mealJson);
+        System.out.println("------------decode---------------");
+        System.out.println(new String(base64.decode(feeJson)));
+        System.out.println(new String(base64.decode(mealJson)));
+        Cookie feeCookie=new Cookie("fee",
+                URLEncoder.encode(new String(base64.encode(JSonUtils.toJSon(FeeList).getBytes())),"UTF-8"));
+        Cookie mealCookie=new Cookie("meal",
+                URLEncoder.encode(new String(base64.encode(JSonUtils.toJSon(mealList).getBytes())),"UTF-8"));
+        response.addCookie(feeCookie);
+        response.addCookie(mealCookie);
 
             StringBuffer stringBuffer = new StringBuffer("<table id='tab1' border='1' class='sum"+i+"'><tr><th>序号</th><th>类目</th><th>单价</th>" +
                     "<th>数量</th><th>小计</th><th>折扣金额</th><th>所属人(多人逗号分开)</th></tr>");
@@ -125,7 +152,7 @@ public class CalcService {
                         .append(m.getPrice()).append("</td><td>").append(m.getQuantity()).append("</td><td>").append(m.getAmount())
                         .append("</td><td>").append(m.getNet()).append("</td><td><input type='text' class='owner" + m.getId() + "'/></td></tr>");
             }
-        for (OtherFee fee : otherFees) {
+        for (OtherFee fee : FeeList) {
             if(fee.getAmount()>0){
                 stringBuffer.append("<tr><td>").append(fee.getId()).append("</td><td>").append(fee.getDiscountName()).append("</td><td>")
                         .append(fee.getPrice()).append("</td><td>").append(fee.getQuantity()).append("</td><td>").append(fee.getAmount())
@@ -137,31 +164,26 @@ public class CalcService {
             return stringBuffer.toString();
         }
 
-    public static void main(String[] args) throws IOException {
-        File f1 = new File("E:\\个人\\饿了吗结账\\评分后.txt");
-        File f2 = new File("E:\\个人\\饿了吗结账\\下单后.txt");
-        File f3 = new File("E:\\个人\\饿了吗结账\\下单未评分.txt");
-        FileReader fr = new FileReader(f1);
-        System.out.println(f1.length());
-        int length = (int) f1.length();
-        char[] contentByte = new char[length];
-        fr.read(contentByte);
-        int realLength = length;
-        for (char c : contentByte) {
-            if ((int) c == 0)
-                realLength--;
+
+    public String splitPerson(String personInfo, HttpServletRequest request) {
+        Cookie[] cookies= request.getCookies();
+        String jsonFee="",jsonMeal="";
+        try{
+            for(Cookie c:cookies){
+                if(c.getName().equalsIgnoreCase("fee")){
+                    jsonFee=new String(base64.decode( URLDecoder.decode(c.getValue(),"UTF-8")));
+                }
+                if(c.getName().equalsIgnoreCase("meal")){
+                    jsonMeal=new String(base64.decode(URLDecoder.decode(c.getValue(),"UTF-8")));
+                }
+            }
+
+        }catch (Exception e){
+            e.printStackTrace();
         }
-        String content = new String(contentByte).substring(0, realLength);
-        System.out.println(content);
-        System.out.println("---------------------------------");
-        content = content.replaceAll("(\\r\\n\\d){5}\\r\\n.+\\r\\n", "");
-        System.out.println(content);
 
-    }
-
-    public String splitPerson(String personInfo, HttpSession session) {
-        List<OtherFee> fees= (List<OtherFee>)session.getAttribute("fee");
-        List<Meal> meals=(List<Meal>)session.getAttribute("meal");
+        List<OtherFee> fees=Arrays.asList(JSonUtils.readValue(jsonFee, OtherFee[].class));
+        List<Meal> meals=Arrays.asList(JSonUtils.readValue(jsonMeal, Meal[].class));
         //personInfo 数据格式  X@1,2,3#Y@4,5
         String [] lines=personInfo.split("#");
         Map<String,Person> persons=new HashMap<String,Person>();
@@ -215,6 +237,29 @@ public class CalcService {
         stringBuffer.append("</table>");
         return stringBuffer.toString();
     }
+
+    public static void main(String[] args) throws IOException {
+        File f1 = new File("E:\\个人\\饿了吗结账\\评分后.txt");
+        File f2 = new File("E:\\个人\\饿了吗结账\\下单后.txt");
+        File f3 = new File("E:\\个人\\饿了吗结账\\下单未评分.txt");
+        FileReader fr = new FileReader(f1);
+        System.out.println(f1.length());
+        int length = (int) f1.length();
+        char[] contentByte = new char[length];
+        fr.read(contentByte);
+        int realLength = length;
+        for (char c : contentByte) {
+            if ((int) c == 0)
+                realLength--;
+        }
+        String content = new String(contentByte).substring(0, realLength);
+        System.out.println(content);
+        System.out.println("---------------------------------");
+        content = content.replaceAll("(\\r\\n\\d){5}\\r\\n.+\\r\\n", "");
+        System.out.println(content);
+
+    }
+
 }
 
 
