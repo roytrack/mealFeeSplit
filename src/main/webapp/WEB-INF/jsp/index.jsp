@@ -1,5 +1,8 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <html>
+<head>
+    <link rel="shortcut icon" href="<%=request.getContextPath()%>/favicon.ico">
+</head>
 <body>
 <h2>饿了吗餐费分拆计算</h2>
 <h3><a href="https://github.com/roytrack/mealFeeSplit/blob/master/README.md" target="_blank">使用说明</a> </h3>
