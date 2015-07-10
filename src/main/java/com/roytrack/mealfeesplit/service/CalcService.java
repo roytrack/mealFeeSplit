@@ -36,6 +36,7 @@ public class CalcService {
         origin = origin.replace("\r\n", "\n").replace("\n", "\r\n")
                 .replaceAll("(\\r\\n\\d){5}\\r\\n.+\\r\\n", "")
                 .replace("该状态下不能点评","")
+                .replace("下单5分钟后才能评论","")
                 .replace("过期不能点评","");
         String[] strArray = origin.split("\r\n");
         List<Meal> mealList = new ArrayList<Meal>();
