@@ -33,136 +33,84 @@ public class CalcService {
     Base64 base64=new Base64();
 
     public String calc(String origin ,HttpServletResponse response) throws IOException {
-        origin = origin.replace("\r\n", "\n").replace("\n", "\r\n")
-                .replaceAll("(\\r\\n\\d){5}\\r\\n.+\\r\\n", "")
-                .replace("该状态下不能点评","")
-                .replace("下单5分钟后才能评论","")
-                .replace("过期不能点评","");
-        String[] strArray = origin.split("\r\n");
-        List<Meal> mealList = new ArrayList<Meal>();
-        List<OtherFee> FeeList = new ArrayList<OtherFee>();
-        short i = 1;//行数
-        int flag = 0;// 0 无状态  1 美食篮子  2 其他费用
+        try{
+            origin = origin.replace("\r\n", "\n").replace("\n", "\r\n");
 
-        Total total=new Total();
-        for (String aline : strArray) {
-            if (aline.startsWith("美食篮子")) {
-                flag = 1;
-                continue;
-            };
-            if (aline.startsWith("其他费用")) {
-                flag = 2;
-                continue;
-            };
-            if(aline.startsWith("合计")){
-                String[] tmp = aline.split("\t");
-                short j = 0;
-                total.setId(i++);
-                total.setTotalName("合计");
-                while (tmp[++j].length() == 0) continue;
-                total.setQuantity(Double.parseDouble(tmp[j]));
-                while (tmp[++j].length() == 0) continue;
-                total.setAmount(Double.parseDouble(tmp[j].substring(1)));
-                continue;
-            }
-            System.out.println(aline.replace("\t", "@"));
-            if (flag == 1) {//美食
+            String[] strArray = origin.split("\r\n");
+            List<Meal> mealList = new ArrayList<Meal>();
+            List<OtherFee> FeeList = new ArrayList<OtherFee>();
+            short i = 1;//行数
+            double orderRealAmount = 0;
+            Total total=new Total();
+            for (String aline : strArray) {
+                if (aline.startsWith("菜品")) {
+
+                    continue;
+                };
+                if(aline.startsWith("实际支付")){
+                    orderRealAmount=Double.parseDouble(aline.substring(5));
+                    continue;
+                }
+                System.out.println(aline.replace("\t", "@"));
                 Meal meal = new Meal();
                 String[] tmp = aline.split("\t");
                 short j = 0;
                 meal.setId(i++);
                 meal.setMealName(tmp[0]);
-                while (tmp[++j].length() == 0) continue;
-                meal.setPrice(Double.parseDouble(tmp[j].substring(1)));
-                while (tmp[++j].length() == 0) continue;
-                meal.setQuantity(Double.parseDouble(tmp[j]));
-                while (tmp[++j].length() == 0) continue;
-                meal.setAmount(Double.parseDouble(tmp[j].substring(1)));
+                meal.setQuantity(tmp[++j].length() == 0?0:Double.parseDouble(tmp[j]));
+                meal.setPrice(tmp[j].length() == 0?0:(CalcUtil.divide(tmp[j+1],tmp[j]).doubleValue()));
+                meal.setAmount(Double.parseDouble(tmp[j+1]));
                 mealList.add(meal);
-            } else if (flag == 2) {
-                OtherFee otherFee = new OtherFee();
-                String[] tmp = aline.split("\t");
-                otherFee.setId(i++);
-                otherFee.setDiscountName(tmp[0]);
-                short j = 0;
-                if (tmp[0].startsWith("红包")) {
-                    while (tmp[++j].length() == 0) continue;
-                    otherFee.setAmount(Double.parseDouble(tmp[j].substring(1)));
-                } else {
-                    while (tmp[++j].length() == 0) continue;
-                    otherFee.setPrice(Double.parseDouble(tmp[j].substring(1)));
-                    while (tmp[++j].length() == 0) continue;
-                    otherFee.setQuantity(Double.parseDouble(tmp[j]));
-                    while (tmp[++j].length() == 0) continue;
-                    otherFee.setAmount(Double.parseDouble(tmp[j].substring(1)));
-                }
-                FeeList.add(otherFee);
-                continue;
             }
-        }
 
             double orderAmount = 0;
             for (Meal m : mealList) {
-                orderAmount += m.getAmount();
+                if(m.getAmount()>0)
+                    orderAmount += m.getAmount();
             }
-            for(OtherFee fee:FeeList){
-                if(fee.getAmount()>0){
-                    orderAmount+=fee.getAmount();
-                }
-            }
-            double orderRealAmount = orderAmount;
-            for (OtherFee fee : FeeList) {
-                if(fee.getAmount()<0){
-                    orderRealAmount += fee.getAmount();
-                }
-            }
+
             double off = CalcUtil.divide(orderRealAmount, orderAmount).doubleValue();
             for (Meal m : mealList) {
                 m.setNet(CalcUtil.multiply(m.getAmount(), off).setScale(2).doubleValue());
             }
 
-        for (OtherFee fee : FeeList) {
-            fee.setNet(CalcUtil.multiply(fee.getAmount(), off).setScale(2).doubleValue());
-        }
-        String feeJson=JSonUtils.toJSon(FeeList);
-        String mealJson=JSonUtils.toJSon(mealList);
+            String feeJson=JSonUtils.toJSon(FeeList);
+            String mealJson=JSonUtils.toJSon(mealList);
 
-        System.out.println("----------json-----------------");
-        System.out.println("feeJson "+feeJson);
-        System.out.println("mealJson "+mealJson);
-        System.out.println("------------encode---------------");
-        feeJson=new String(base64.encode(JSonUtils.toJSon(FeeList).getBytes()));
-        mealJson=new String(base64.encode(JSonUtils.toJSon(mealList).getBytes()));
-        System.out.println(feeJson);
-        System.out.println(mealJson);
-        System.out.println("------------decode---------------");
-        System.out.println(new String(base64.decode(feeJson)));
-        System.out.println(new String(base64.decode(mealJson)));
-        Cookie feeCookie=new Cookie("fee",
-                URLEncoder.encode(new String(base64.encode(JSonUtils.toJSon(FeeList).getBytes())),"UTF-8"));
-        Cookie mealCookie=new Cookie("meal",
-                URLEncoder.encode(new String(base64.encode(JSonUtils.toJSon(mealList).getBytes())),"UTF-8"));
-        response.addCookie(feeCookie);
-        response.addCookie(mealCookie);
+            System.out.println("----------json-----------------");
+            System.out.println("feeJson "+feeJson);
+            System.out.println("mealJson "+mealJson);
+            System.out.println("------------encode---------------");
+            feeJson=new String(base64.encode(JSonUtils.toJSon(FeeList).getBytes()));
+            mealJson=new String(base64.encode(JSonUtils.toJSon(mealList).getBytes()));
+            System.out.println(feeJson);
+            System.out.println(mealJson);
+            System.out.println("------------decode---------------");
+            System.out.println(new String(base64.decode(feeJson)));
+            System.out.println(new String(base64.decode(mealJson)));
+            Cookie feeCookie=new Cookie("fee",
+                    URLEncoder.encode(new String(base64.encode(JSonUtils.toJSon(FeeList).getBytes())),"UTF-8"));
+            Cookie mealCookie=new Cookie("meal",
+                    URLEncoder.encode(new String(base64.encode(JSonUtils.toJSon(mealList).getBytes())),"UTF-8"));
+            response.addCookie(feeCookie);
+            response.addCookie(mealCookie);
 
             StringBuffer stringBuffer = new StringBuffer("<table id='tab1' border='1' class='sum"+i+"'><tr><th>序号</th><th>类目</th><th>单价</th>" +
                     "<th>数量</th><th>小计</th><th>折扣金额</th><th>所属人(多人逗号分开)</th></tr>");
 
             for (Meal m : mealList) {
-                stringBuffer.append("<tr><td>").append(m.getId()).append("</td><td>").append(m.getMealName()).append("</td><td>")
-                        .append(m.getPrice()).append("</td><td>").append(m.getQuantity()).append("</td><td>").append(m.getAmount())
-                        .append("</td><td>").append(m.getNet()).append("</td><td><input type='text' class='owner" + m.getId() + "'/></td></tr>");
+                if(m.getAmount()>0)
+                    stringBuffer.append("<tr><td>").append(m.getId()).append("</td><td>").append(m.getMealName()).append("</td><td>")
+                            .append(m.getPrice()).append("</td><td>").append(m.getQuantity()).append("</td><td>").append(m.getAmount())
+                            .append("</td><td>").append(m.getNet()).append("</td><td><input type='text' class='owner" + m.getId() + "'/></td></tr>");
             }
-        for (OtherFee fee : FeeList) {
-            if(fee.getAmount()>0){
-                stringBuffer.append("<tr><td>").append(fee.getId()).append("</td><td>").append(fee.getDiscountName()).append("</td><td>")
-                        .append(fee.getPrice()).append("</td><td>").append(fee.getQuantity()).append("</td><td>").append(fee.getAmount())
-                        .append("</td><td>").append(fee.getNet()).append("</td><td><input type='text' class='owner" + fee.getId() + "'/></td></tr>");
-            }
-
-        }
             stringBuffer.append("</table>");
             return stringBuffer.toString();
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new IOException(e.getMessage());
+        }
+
         }
 
 
