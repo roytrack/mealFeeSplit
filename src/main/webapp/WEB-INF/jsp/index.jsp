@@ -1,7 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <html>
 <head>
-    <link rel="shortcut icon" href="<%=request.getContextPath()%>/favicon.ico">
+    <link rel="shortcut icon" href="http://7sblu6.com1.z0.glb.clouddn.com/icon_favicon.ico">
 </head>
 <body>
 <h2>饿了吗餐费分拆计算</h2>
