@@ -5,7 +5,7 @@
 </head>
 <body>
 <h2>饿了吗餐费分拆计算</h2>
-<h3><a href="https://github.com/roytrack/mealFeeSplit/blob/master/README.md" target="_blank">使用说明</a> </h3>
+<h3><a href="/s/readme.html" target="_blank">使用说明</a> </h3>
 <form >
     <textarea id="origin" name="origin" cols="100" rows="50"></textarea>
 <button type="button" id="commit">提交</button>
