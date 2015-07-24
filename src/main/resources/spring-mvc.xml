@@ -29,6 +29,7 @@
                                       expression="org.springframework.web.bind.annotation.ControllerAdvice"/>
 
        </context:component-scan>
+    <mvc:resources mapping="/s/**" location="/s/"></mvc:resources>
     <mvc:view-controller path="/" view-name="index"/>
     <mvc:default-servlet-handler/>
        <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver"
