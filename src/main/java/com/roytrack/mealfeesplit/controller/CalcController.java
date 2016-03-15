@@ -9,11 +9,10 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 import java.io.IOException;
 
 /**
- * Created by ruanchangming on 2015/7/1.
+ * Created by roytrack on 2015/7/1.
  */
 @Controller
 public class CalcController {

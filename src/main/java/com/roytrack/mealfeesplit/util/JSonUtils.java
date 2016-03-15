@@ -3,7 +3,7 @@ package com.roytrack.mealfeesplit.util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * Created by ruanchangming on 2015/7/9.
+ * Created by roytrack on 2015/7/9.
  */
 public class JSonUtils {
     static ObjectMapper objectMapper;

@@ -1,7 +1,7 @@
 package com.roytrack.mealfeesplit.model;
 
 /**
- * Created by ruanchangming on 2015/7/8.
+ * Created by roytrack on 2015/7/8.
  */
 public class Person {
     private int id;

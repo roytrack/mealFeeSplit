@@ -11,7 +11,7 @@ import java.math.BigDecimal;
  * 为了能够进行精确的数学运算和比较写了这个类
  * 提供精确的加减乘除方法
  * 提供精确的比较大小的方法
- * @author ruanchangming
+ * @author roytrack
  * @version 1.0
  * @date 2013年8月16日 14:10:05
  * */

@@ -1,7 +1,7 @@
 package com.roytrack.mealfeesplit.model;
 
 /**
- * Created by ruanchangming on 2015/7/2.
+ * Created by roytrack on 2015/7/2.
  */
 public class Total {
     private int id;
