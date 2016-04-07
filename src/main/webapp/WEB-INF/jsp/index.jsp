@@ -4,8 +4,9 @@
     <link rel="shortcut icon" href="http://7sblu6.com1.z0.glb.clouddn.com/icon_favicon.ico">
 </head>
 <body>
-<h2>饿了吗餐费分拆计算</h2>
-<h3><a href="/s/readme.html" target="_blank">使用说明</a> </h3>
+<h2>饿了吗&美团餐费分拆计算</h2>
+<h3><a href="/s/readme.html" target="_blank">饿了么使用说明</a> </h3>
+<h3><a href="/s/readme2.html" target="_blank">美团使用说明</a> </h3>
 <form >
     <textarea id="origin" name="origin" cols="100" rows="50"></textarea>
 <button type="button" id="commit">提交</button>

@@ -16,7 +16,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -37,18 +36,18 @@ public class CalcService {
          * @author roytrack
          * */
 
-            origin = origin.replace("\r\n", "\n").replace("\n", "\r\n");
-            String[] strArray1 = origin.split("\r\n");
-            origin="";
-            for(String line:strArray1){
-                line=line.replaceAll(" ","\t");
-                String [] word=line.split("\t");
-                if(word.length==2){
-                    line=line.replaceAll("\t","\t\t");
-                }
-                origin+=line+"\r\n";
-
+        origin = origin.replace("\r\n", "\n").replace("\n", "\r\n");
+        String[] strArray1 = origin.split("\r\n");
+        origin="";
+        for(String line:strArray1){
+            line=line.replaceAll(" ","\t");
+            String [] word=line.split("\t");
+            if(word.length==2){
+                line=line.replaceAll("\t","\t\t");
             }
+            origin+=line+"\r\n";
+
+        }
 
 
 
@@ -68,11 +67,56 @@ public class CalcService {
         }
         origin=tmpStr;
 
-         if (origin.startsWith("美食篮子")) {
+        if (origin.startsWith("美食篮子")) {
             return calcComplex(origin, response);
+        }else if(origin.startsWith("菜品共")){
+            return calcMeituan(origin,response);
         } else {
             return calcSample(origin, response);
         }
+    }
+
+    private String calcMeituan(String origin, HttpServletResponse response) throws IOException {
+        try{
+            String[] strArray = origin.split("\r\n");
+            ArrayList<String> originList=new ArrayList<String>(Arrays.asList(strArray));
+            Iterator<String> itr=originList.iterator();
+            while (itr.hasNext()){
+                String aline=itr.next();
+                if(aline.startsWith("满减优惠")||aline.startsWith("支付红包优惠")||aline.startsWith("配送费")){
+                    itr.remove();
+                }
+            }
+            String tmpLine=null;
+            List<String> newList=new ArrayList<>();
+            newList.add("菜品\r\n");
+            for(int i=1;i<originList.size();i++){
+                String aline=originList.get(i);
+                if(tmpLine==null){
+                    tmpLine=aline;
+                    continue;
+                }
+                if(!aline.startsWith("¥")){
+                    tmpLine=aline;
+                }else{
+                    tmpLine=tmpLine+"\t"+aline.substring(aline.indexOf("*")+1)+"\t"+aline.substring(aline.indexOf("¥")+1,aline.indexOf("*"))+"\r\n";
+                    newList.add(tmpLine);
+                    tmpLine="";
+                }
+            }
+            StringBuffer newOrigin=new StringBuffer();
+            for(String aline:newList){
+                newOrigin.append(aline);
+            }
+            newOrigin.append("实际支付："+strArray[0].substring(strArray[0].indexOf("¥")+1));
+            System.out.println(newOrigin.toString());
+            return calcSample(newOrigin.toString(),response);
+
+        }catch (Exception e){
+        e.printStackTrace();
+            return "";
+        }
+
     }
 
     public String calcSample(String origin, HttpServletResponse response) throws IOException {
@@ -81,6 +125,7 @@ public class CalcService {
 
             String[] strArray = origin.split("\r\n");
             List<Meal> mealList = new ArrayList<Meal>();
+            List<OtherFee> FeeList = new ArrayList<OtherFee>();
             short i = 1;//行数
             double orderRealAmount = 0;
             Total total = new Total();
@@ -88,8 +133,7 @@ public class CalcService {
                 if (aline.startsWith("菜品")) {
 
                     continue;
-                }
-                ;
+                };
                 if (aline.startsWith("实际支付")) {
                     orderRealAmount = Double.parseDouble(aline.substring(5));
                     continue;
@@ -117,18 +161,37 @@ public class CalcService {
                 m.setNet(CalcUtil.multiply(m.getAmount(), off).setScale(2,BigDecimal.ROUND_HALF_UP).doubleValue());
             }
 
-
+            String feeJson = JSonUtils.toJSon(FeeList);
             String mealJson = JSonUtils.toJSon(mealList);
 
             System.out.println("----------json-----------------");
+            System.out.println("feeJson " + feeJson);
             System.out.println("mealJson " + mealJson);
             System.out.println("------------encode---------------");
+            feeJson = new String(base64.encode(JSonUtils.toJSon(FeeList).getBytes()));
             mealJson = new String(base64.encode(JSonUtils.toJSon(mealList).getBytes()));
+            System.out.println(feeJson);
             System.out.println(mealJson);
             System.out.println("------------decode---------------");
+            System.out.println(new String(base64.decode(feeJson)));
             System.out.println(new String(base64.decode(mealJson)));
-
-            storeMealCookie(mealJson,response);
+            Cookie feeCookie = new Cookie("fee",
+                    URLEncoder.encode(new String(base64.encode(JSonUtils.toJSon(FeeList).getBytes())), "UTF-8"));
+            response.addCookie(feeCookie);
+            if(mealJson.length()>2000){
+                String meal1=mealJson.substring(0,2000);
+                String meal2=mealJson.substring(2000);
+                Cookie mealCookie1 = new Cookie("meal",
+                        URLEncoder.encode(meal1, "UTF-8"));
+                Cookie mealCookie2 = new Cookie("meal2",
+                        URLEncoder.encode(meal2, "UTF-8"));
+                response.addCookie(mealCookie1);
+                response.addCookie(mealCookie2);
+            }else{
+                Cookie mealCookie = new Cookie("meal",
+                        URLEncoder.encode(new String(base64.encode(JSonUtils.toJSon(mealList).getBytes())), "UTF-8"));
+                response.addCookie(mealCookie);
+            }
 
 
             StringBuffer stringBuffer = new StringBuffer("<table id='tab1' border='1' class='sum" + i + "'><tr><th>序号</th><th>类目</th><th>单价</th>" +
@@ -263,7 +326,20 @@ public class CalcService {
             Cookie feeCookie = new Cookie("fee",
                     URLEncoder.encode(new String(base64.encode(JSonUtils.toJSon(FeeList).getBytes())), "UTF-8"));
             response.addCookie(feeCookie);
-            storeMealCookie(mealJson, response);
+            if(mealJson.length()>2000){
+                String meal1=mealJson.substring(0,2000);
+                String meal2=mealJson.substring(2000);
+                Cookie mealCookie1 = new Cookie("meal",
+                        URLEncoder.encode(meal1, "UTF-8"));
+                Cookie mealCookie2 = new Cookie("meal2",
+                        URLEncoder.encode(meal2, "UTF-8"));
+                response.addCookie(mealCookie1);
+                response.addCookie(mealCookie2);
+            }else{
+                Cookie mealCookie = new Cookie("meal",
+                        URLEncoder.encode(new String(base64.encode(JSonUtils.toJSon(mealList).getBytes())), "UTF-8"));
+                response.addCookie(mealCookie);
+            }
 
 
             StringBuffer stringBuffer = new StringBuffer("<table id='tab1' border='1' class='sum" + i + "'><tr><th>序号</th><th>类目</th><th>单价</th>" +
@@ -294,7 +370,7 @@ public class CalcService {
 
     public String splitPerson(String personInfo, HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
-        String jsonFee = "", jsonMeal = "",jsonMeal2="",jsonMeal3="";
+        String jsonFee = "", jsonMeal = "",jsonMeal2="";
         try {
             boolean longMeal=false;
             for (Cookie c : cookies) {
@@ -308,13 +384,9 @@ public class CalcService {
                     longMeal=true;
                     jsonMeal2 = c.getValue();
                 }
-                if (c.getName().equalsIgnoreCase("meal3")) {
-                    longMeal=true;
-                    jsonMeal3 = c.getValue();
-                }
             }
             if(longMeal){
-                jsonMeal=jsonMeal+jsonMeal2+jsonMeal3;
+                jsonMeal=jsonMeal+jsonMeal2;
                 jsonMeal=new String(base64.decode(URLDecoder.decode(jsonMeal, "UTF-8")));
             }else{
                 jsonMeal=new String(base64.decode(URLDecoder.decode(jsonMeal, "UTF-8")));
@@ -398,28 +470,6 @@ public class CalcService {
         System.out.println("---------------------------------");
         content = content.replaceAll("(\\r\\n\\d){5}\\r\\n.+\\r\\n", "");
         System.out.println(content);
-
-    }
-
-    private void storeMealCookie(String mealList,HttpServletResponse response) throws UnsupportedEncodingException {
-        if(mealList.length()>2000){
-            String meal1=mealList.substring(0,2000);
-            String meal2=mealList.substring(2000,5000);
-            String meal3=mealList.substring(5000);
-            Cookie mealCookie1 = new Cookie("meal",
-                    URLEncoder.encode(meal1, "UTF-8"));
-            Cookie mealCookie2 = new Cookie("meal2",
-                    URLEncoder.encode(meal2, "UTF-8"));
-            Cookie mealCookie3 = new Cookie("meal3",
-                    URLEncoder.encode(meal3, "UTF-8"));
-            response.addCookie(mealCookie1);
-            response.addCookie(mealCookie2);
-            response.addCookie(mealCookie3);
-        }else{
-            Cookie mealCookie = new Cookie("meal",
-                    URLEncoder.encode(new String(base64.encode(JSonUtils.toJSon(mealList).getBytes())), "UTF-8"));
-            response.addCookie(mealCookie);
-        }
 
     }
 
